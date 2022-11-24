@@ -1,0 +1,7 @@
+*
+!*/
+!**/*.*
+!make*
+.history
+**/cmake-build-debug
+**/.idea
