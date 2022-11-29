@@ -1,7 +1,6 @@
 // A simple 2D-vector template for concise notation
-#include<iostream>
 #include<cmath>
-//#include"vec.h"
+#include<iostream>
 
 template<typename T>
 class vec {
@@ -35,6 +34,11 @@ public:
 		return {k*v.x, k*v.y};
 	}
 
+	// vec operator*(const vec& rhs) {
+	// 	// Multiplication is element-wise!!!
+	// 	return {x * rhs.x, y * rhs.y};
+	// }
+
 	T modulo_squared() {
 		return x*x + y*y;
 	}
@@ -49,5 +53,9 @@ public:
 
 	bool operator==(const vec& other) {
 		return (x == other.x && y == other.y);
+	}
+
+	operator vec<int>() {
+		return {static_cast<int>(x), static_cast<int>(y)};
 	}
 };

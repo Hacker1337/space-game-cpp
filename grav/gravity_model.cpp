@@ -10,10 +10,12 @@ protected:
 	float mass;
 	vec<float> pos;
 	float radius;
+
+	float to_pixel_coef = 1.f;
 public:
 	GravitatingObject() = delete;
-	GravitatingObject(float x, float y, float mass=1):
-	mass(mass), pos{x, y}, radius(5) {}
+	GravitatingObject(float x, float y, float mass, float radius):
+	pos{x, y}, mass(mass), radius(radius) {}
 
 	// May well need to allocate resources (e.g. images) far down the hierarchy
 	virtual ~GravitatingObject() {}
@@ -44,8 +46,9 @@ public:
 		return other->pos == pos; 
 	}
 
-	// Maybe add a virtual function to update state parameters?
-	// E.g. animations or modifiable mass
+	vec<int> convert_to_pixels() {
+		return to_pixel_coef*pos;
+	}
 };
 
 enum class Bounds {TOP, RIGHT, BOTTOM, LEFT};
@@ -53,15 +56,15 @@ enum class Bounds {TOP, RIGHT, BOTTOM, LEFT};
 
 class MobileGravitatingObject: public GravitatingObject {
 	// Self-explanatory 
-private:
+protected:
 	vec<float> vel;
 	//using enum Bounds;
 public:
 	vec<float> accel;
 
 	MobileGravitatingObject() = delete;
-	MobileGravitatingObject(float x, float y, float v0x = .0, float v0y = .0, float mass=1.):
-	GravitatingObject(x, y, mass), vel{v0x, v0y}, accel{0, 0} {}
+	MobileGravitatingObject(float x, float y, float mass, float radius=5., float v0x = .0, float v0y = .0):
+	GravitatingObject(x, y, mass, radius), vel{v0x, v0y}, accel{0, 0} {}
 
 	vec<float> v() {
 		return vel;
@@ -77,12 +80,13 @@ public:
 	// Integrator may well need to be modified(movement animations/attenuation)
 	virtual void move(const float& dt) {
 		// Naive integration okay for the goals we pursue
+		// VERLET
 		pos += vel * dt + 0.5*accel*dt*dt;
 		vel += accel * dt;
 	}
 
 	// Object-specific event-bound functions
-	virtual void on_collision() {
+	virtual void on_collision(shared_ptr<GravitatingObject> col_with) {
 		// To process landings
 		return;
 	}
@@ -99,18 +103,52 @@ public:
 	}
 };
 
-// If we end up adding enemies, probably most of the player class 
-// should be shifted to an intermediary "spaceship" class
-
-class Player final: public MobileGravitatingObject {
+class Projectile final: public MobileGravitatingObject {
 private:
-	float jet_accel_mod; // Likely needs further balancing
+	int damage;
+public:
+	Projectile(float x, float y, int dmg, float mass, float radius, float vx0, float vy0): 
+	MobileGravitatingObject(x, y, mass, radius, vx0, vy0), damage(dmg) {}
+
+	void on_collision(shared_ptr<GravitatingObject> col_with) override {
+		// Has to deal damage (should change the signature for that to be possible)
+		// And delete itself. That is the next big problem, at the moment 
+		// deleting something from grav_objects is basically unmanageable
+		//col_with->take_damage(dmg) 
+		return;
+	}
+
+	void on_out_of_bounds(Bounds b) override {
+		// Should probably delete itself as well
+		// Maybe not when locked (if this is even a thing)
+	}
+};
+
+class Spaceship: public MobileGravitatingObject {
+protected:
+	float jet_accel_mod;
+	float proj_speed;
+	int proj_damage;
+	int hp;
+public:
+	Spaceship(float x, float y, float mass, float radius=5., float v0x = .0, float v0y = .0):
+	MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.), proj_speed(5.), proj_damage(3), hp(100) {}
+
+	Projectile* fire_projectile() {
+		auto v0 = proj_speed * vel / vel.modulo();
+		return new Projectile(x(), y(), proj_damage, .01, 1., v0.x, v0.y);
+	}
+};
+
+class Player final: public Spaceship {
+private:
 	bool locked; shared_ptr<GravitatingObject> locked_to; // To track the object it can't leave
 public:
 	vec<float> mouse_shift{0, 0}; // Will be captured each step at some point, for now is just set from main
 
-	Player(float x, float y, float v0x = .0, float v0y = .0, float mass=1.):
-	MobileGravitatingObject(x, y, v0x, v0y, mass), jet_accel_mod(2.), mouse_shift{0., 0.},
+	Player(float x, float y, float mass=1., float radius=5., float v0x = .0, float v0y = .0):
+	// MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.)
+	Spaceship(x, y,mass, radius, v0x, v0y), mouse_shift{0., 0.},
 	locked(false), locked_to(shared_ptr<GravitatingObject>(nullptr)) {}
 
 	vec<float> add_jet_accel() {
@@ -143,10 +181,12 @@ class GravitySolver final {
 private: 
 	const double GAMMA = 5; 
 
-	const double dt = .1;	//Should regulate game speed and model accuracy
+	const double dt = .01;	//Should regulate game speed and model accuracy
 
 	const double X_BOUND, Y_BOUND; // To check when objects tresspass
 	//using enum Bounds;
+
+	double vis_x = 500, vis_y = 500;
 public:
 	vector<shared_ptr<GravitatingObject>> grav_objects; // All that gravitates
 	vector<shared_ptr<MobileGravitatingObject>> mobile_objects; // Separate vector of pointers to objects that move
@@ -187,7 +227,7 @@ public:
 
 			auto d = distance(mob_index_in_grav(mob_i), all_j);
 			if (d < grav_objects[all_j]->size()) {
-				mobile_objects[mob_i]->on_collision();
+				mobile_objects[mob_i]->on_collision(grav_objects[all_j]);
 			}
 		}
 
@@ -224,7 +264,7 @@ public:
 			for (unsigned j = 0u; j < grav_objects.size(); ++j)
 			{
 				unsigned Idx = mob_index_in_grav(i);
-				if (incl_mask[i] || mob_index_in_grav(i) == j) {continue;}
+				if (!incl_mask[j] || mob_index_in_grav(i) == j) {continue;}
 				resolve_collision(i, j);
 				float sc = GAMMA * grav_objects[j]->m() / distance_squared(Idx, j) /distance(Idx, j);
 				auto dr = grav_objects[j]->r() - grav_objects[Idx]->r();
@@ -266,6 +306,19 @@ public:
 			// the corresponding index in grav_objects
 			return mobile_indices[mobile_objects[mob_i].get()];
 		}
+
+		vector<GravitatingObject*> visible() {
+			vector<GravitatingObject*> res;
+			for (unsigned i = 0u; i < grav_objects.size(); ++i) {
+				auto dx = player()->x() - grav_objects[i]->x();
+				auto dy = player()->y() - grav_objects[i]->y();
+				if (dx > -vis_x/2 && dx < vis_x/2 
+						&& dy > -vis_y/2 && dy < vis_y/2) {
+					res.push_back(grav_objects[i].get());
+				} 
+			}
+			return res;
+		}
 	
 	// Changing the composition of the object lists
 
@@ -282,6 +335,14 @@ public:
 		void AddFixedObject(bool incl, Params... args) {
 			grav_objects.push_back(make_shared<T>(args...));
 			incl_mask.push_back(incl);
+		}
+
+		void AddProjectile(Projectile* p) {
+			mobile_objects.push_back(shared_ptr<Projectile>(p));
+			grav_objects.push_back(shared_ptr<Projectile>(nullptr));
+			grav_objects.back() = mobile_objects.back();
+			mobile_indices[mobile_objects.back().get()] = grav_objects.size() - 1;
+			incl_mask.push_back(false);
 		}
 
 		// Admittedly, I hate that my syntax demands starting constructor params with the include flag 
