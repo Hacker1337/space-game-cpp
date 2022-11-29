@@ -1,26 +1,54 @@
 #include<fstream>
+#include<vector>
+#include<string>
 #include"gravity_model.cpp"
 using Planet = GravitatingObject;
 using namespace std;
 
-int main() {
+struct Manifest {
+	vector<string> list;
+
+	void add(string tag) {
+		list.push_back(tag);
+	}
+
+	void write() {
+		ofstream file("demos/demo_man.txt");
+		for (string tag: list) 
+			file<< tag<<'\n';
+		file.close();
+	}
+};
+Manifest man {};
+
+void single_planet(int n_steps, string tag="gravity_demo", float vel_coef = 1) {
+	float r = 500, m = 1000;
 	GravitySolver gs; // Created the gravity modelling environment
-	gs.player()->mouse_shift = {0, -1}; // Moved the mouse(engines started)
-	for(int i = 0; i < 3; ++i) gs.step();
-	gs.player()->mouse_shift = {0, 1}; // Changed direction(slowing down)
-	for(int i = 0; i < 2; ++i) gs.step();
-	gs.player()->mouse_shift = {-1, 0}; // Now, moving along the x axis
-	for(int i = 0; i < 5; ++i) gs.step(); // Accelerating
-	gs.player()->mouse_shift = {0, 0}; // Engines off
-	gs.AddFixedObject<Planet>(true, 250, 250, 1000); // Adding a planet
-	gs.AddFixedObject<Planet>(true, 1250, 550, 5000); // And another one
-	gs.AddFixedObject<Planet>(true, 2000, 0, 3000);
-	ofstream file("dump.traj.txt");
-	for(int i = 0; i < 1000; ++i) {
-		//cout<< gs.player()->accel<< '\n';
+	gs.AddFixedObject<Planet>(true, 0, r, m); // Adding a planet
+	float vst = sqrt(5*m/r);
+	if (vel_coef != 1.f) vst *= vel_coef;
+	gs.player()->set_vel({vst, 0}); // Corresponding to current orbit
+
+	ofstream file("demos/" + tag + ".txt");
+	file<< tag<< '\n';
+	file << "1 planets at:\n0 "<< r<< "\nTrajectory:\n";
+	for(int i = 0; i < n_steps; ++i) {
 		file<< gs.player()->x()<< ' '<< gs.player()->y()<< '\n';
 		gs.step();
 	}
 	file.close();
+	man.add(tag);
+}
+
+int main(int argc, char **argv) {
+	int n_steps;
+	if (argc >= 1) 
+		n_steps = atoi(argv[1]);
+	if (n_steps == 0) n_steps = 10000;
+
+	single_planet(n_steps, "Circle trajectory", 1);
+	single_planet(n_steps, "Low velocity", .5);
+	single_planet(n_steps, "High velocity", 1.5);
+	man.write();
 	return 0;
 }

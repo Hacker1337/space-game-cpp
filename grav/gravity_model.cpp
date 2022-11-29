@@ -13,7 +13,7 @@ protected:
 public:
 	GravitatingObject() = delete;
 	GravitatingObject(float x, float y, float mass=1):
-	mass(mass), pos{x, y} {}
+	mass(mass), pos{x, y}, radius(5) {}
 
 	// May well need to allocate resources (e.g. images) far down the hierarchy
 	virtual ~GravitatingObject() {}
@@ -48,10 +48,14 @@ public:
 	// E.g. animations or modifiable mass
 };
 
+enum class Bounds {TOP, RIGHT, BOTTOM, LEFT};
+// Would be convenient with the "using enum " expression from c++20
+
 class MobileGravitatingObject: public GravitatingObject {
 	// Self-explanatory 
 private:
 	vec<float> vel;
+	//using enum Bounds;
 public:
 	vec<float> accel;
 
@@ -64,6 +68,10 @@ public:
 	}
 	float v_squared() {
 		return vel.modulo();
+	}
+
+	void set_vel(vec<float> v) {
+		vel = v;
 	}
 
 	// Integrator may well need to be modified(movement animations/attenuation)
@@ -82,6 +90,11 @@ public:
 	virtual void on_locked(shared_ptr<GravitatingObject> locked_to) {
 		// To process low-velocity states where jet acceleration is 
 		// not sufficient to leave an object's gravitational field
+		return;
+	}
+
+	virtual void on_out_of_bounds(Bounds b) {
+		// Behaviour on crossing bound is yet to be defined
 		return;
 	}
 };
@@ -127,17 +140,13 @@ public:
 };
 
 class GravitySolver final {
-	/*
-	/	Singleton, manages the whole environment of gravitating objects
-	*/
 private: 
-	const double GAMMA = 5; // Strictly speaking, this just changes 
-							// the characteristic masses of planets
-							// we will need to set for same results
+	const double GAMMA = 5; 
 
-	const double dt = .1;	//Should regulate game speed, I haven't really been able to test this
+	const double dt = .1;	//Should regulate game speed and model accuracy
 
 	const double X_BOUND, Y_BOUND; // To check when objects tresspass
+	//using enum Bounds;
 public:
 	vector<shared_ptr<GravitatingObject>> grav_objects; // All that gravitates
 	vector<shared_ptr<MobileGravitatingObject>> mobile_objects; // Separate vector of pointers to objects that move
@@ -145,9 +154,8 @@ public:
 
 	map<GravitatingObject*, unsigned> mobile_indices;
 
-	vector<bool> incl_mask; // Shows which mobile objects should interact with each other
-	// As in, all will interact with the fixed objects, but skipping 
-	// interactions between light ships should somewhat boost performance
+	vector<bool> incl_mask; // Shows which objects should be included in the interactions
+	// Skipping some can be useful
 
 	unsigned long long epoch = 0; // To keep track of time if we don't elsewhere
 
@@ -173,32 +181,28 @@ public:
 			return (grav_objects[i]->r() - grav_objects[j]->r()).modulo_squared();
 		}
 
-		vec<float> force(unsigned i, unsigned j) { 
-		// Not really used anywhere at the moment
-			float sc = GAMMA * mobile_objects[i]->m() *
-			 				grav_objects[j]->m() / distance_squared(i, j); 
-			return sc/distance(i, j) * (mobile_objects[i]->r() - grav_objects[j]->r());
-		}
-
 	// Processing of special cases
-		void resolve_collision(unsigned i, unsigned j) {
-			auto d = distance_squared(i, j);
-			if (d < grav_objects[i]->size() ||
-				d < grav_objects[j]->size()) {
-					cout<< "Collision between objects at idx "<< i<< " "<< j<< '\n';
+		void resolve_collision(unsigned mob_i, unsigned all_j) {
+			if (mob_index_in_grav(mob_i) == all_j) return;
+
+			auto d = distance(mob_index_in_grav(mob_i), all_j);
+			if (d < grav_objects[all_j]->size()) {
+				mobile_objects[mob_i]->on_collision();
 			}
 		}
 
-		void resolve_out_of_bounds(unsigned i) {
-		// Currently just floods the terminal
-			if (mobile_objects[i]->x() > X_BOUND ) {
-				cout<< "Object at id "<< i<< "violated the right bound";
-			} else if (mobile_objects[i]->x() < 0) {
-				cout<< "Object at id "<< i<< "violated the left bound";
-			} else if (mobile_objects[i]->y() > Y_BOUND) {
-				cout<< "Object at id "<< i<< "violated the top bound";
-			} else if (mobile_objects[i]->y() < 0) {
-				cout<< "Object at id "<< i<< "violated the bottom bound";
+		void resolve_out_of_bounds(unsigned mob_i) {
+			float x = mobile_objects[mob_i]->x(),
+				y = mobile_objects[mob_i]->y();
+
+			if (x > X_BOUND ) {
+				mobile_objects[mob_i]->on_out_of_bounds(Bounds::RIGHT);
+			} else if (x < 0) {
+				mobile_objects[mob_i]->on_out_of_bounds(Bounds::LEFT);
+			} else if (y > Y_BOUND) {
+				mobile_objects[mob_i]->on_out_of_bounds(Bounds::TOP);
+			} else if (y < 0) {
+				mobile_objects[mob_i]->on_out_of_bounds(Bounds::BOTTOM);
 			}
 		}
 
@@ -215,9 +219,9 @@ public:
 
 	// System-of-bodies-level calculations
 	void calculate_accels() {
-		for (int i = 0; i < mobile_objects.size(); ++i) {
+		for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
 			mobile_objects[i]->accel = {0, 0};
-			for (int j = 0; j < grav_objects.size(); ++j)
+			for (unsigned j = 0u; j < grav_objects.size(); ++j)
 			{
 				unsigned Idx = mob_index_in_grav(i);
 				if (incl_mask[i] || mob_index_in_grav(i) == j) {continue;}
@@ -233,12 +237,12 @@ public:
 	void step() {
 		epoch++;
 		calculate_accels();
-		for (int i = 0; i < mobile_objects.size(); ++i)
+		for (unsigned i = 0u; i < mobile_objects.size(); ++i)
 		{
 			mobile_objects[i]->move(dt);
 			resolve_out_of_bounds(i);
 		}
-		for (int i = 0; i < grav_objects.size(); ++i)
+		for (unsigned i = 0u; i < grav_objects.size(); ++i)
 		{
 			resolve_locked(i);
 		}
