@@ -1,7 +1,6 @@
 // A simple 2D-vector template for concise notation
 #include<iostream>
 #include<cmath>
-//#include"vec.h"
 
 template<typename T>
 class vec {
