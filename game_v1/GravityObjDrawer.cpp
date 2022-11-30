@@ -9,8 +9,7 @@ class GravityObjDrawer {
    public:
     GravityObjDrawer() = delete;
 
-    GravityObjDrawer(const GravitySolver& gs, sf::Sprite playerSprite, sf::RenderWindow& window) : gs(gs), window(window) {
-        object_sprites.push_back(playerSprite);
+    GravityObjDrawer(const GravitySolver& gs, sf::RenderWindow& window) : gs(gs), window(window) {
 
         sf::Vector2u center(window.getSize().x/2,window.getSize().y/2);
         gs.grav_objects[0]->setPosition(center.x, center.y);

@@ -14,8 +14,17 @@ using namespace std;
 int main(int argc, char const *argv[]) {
     map<string, sf::Texture> textures;
 
-    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Hello From SFML");
+    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Space Game!");
 
+    sf::Texture background_texture;
+    if (!background_texture.loadFromFile("img/background2.jpg")) {
+        // error...
+    }
+    // background_texture.create(window.getSize().x, window.getSize().y);
+    sf::Sprite background;
+    background.setTexture(background_texture);
+    
+    background.setScale(window.getSize().x/background_texture.getSize().x, window.getSize().y/background_texture.getSize().y);
     window.setFramerateLimit(600);  // call it once, after creating the window
 
     GravitySolver gs;  // Created the gravity modelling environment
@@ -44,7 +53,7 @@ int main(int argc, char const *argv[]) {
 
     
 
-    GravityObjDrawer drawer(gs, playerSprite, window);
+    GravityObjDrawer drawer(gs, window);
 
     sf::Sprite planetSprite;
     sf::Texture planetTexture;
@@ -109,6 +118,7 @@ int main(int argc, char const *argv[]) {
         gs.step();
 
         window.clear();
+        window.draw(background);
         drawer.draw();
 
         // planetSprite.setPosition(100, 100);
