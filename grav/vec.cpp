@@ -39,11 +39,11 @@ public:
 	// 	return {x * rhs.x, y * rhs.y};
 	// }
 
-	T modulo_squared() {
+	T modulo_squared() const {
 		return x*x + y*y;
 	}
 
-	T modulo() {
+	T modulo() const {
 		return sqrt(modulo_squared());
 	}
 

@@ -7,6 +7,7 @@ using namespace std;
 
 class GravitatingObject { // Stationary gravitational object abstract class
 protected:
+	bool erased = false;
 	float mass;
 	vec<float> pos;
 	float radius;
@@ -25,20 +26,24 @@ public:
 	GravitatingObject& operator=(const GravitatingObject& other) = delete;
 
 	// Invalidating-proof access to private properties
-	float m() {
+	float m() const {
 		return mass;
 	}
-	vec<float> r() {
+	vec<float> r() const {
 		return pos;
 	}
-	float x() {
+	float x() const {
 		return pos.x;
 	}
-	float y() {
+	float y() const {
 		return pos.y;
 	}
-	float size() {
+	float size() const {
 		return radius;
+	}
+
+	bool dead() const {
+		return erased;
 	}
 
 	bool operator==(GravitatingObject* other) {
@@ -49,6 +54,8 @@ public:
 	vec<int> convert_to_pixels() {
 		return to_pixel_coef*pos;
 	}
+
+	virtual void kill() {return;}
 };
 
 enum class Bounds {TOP, RIGHT, BOTTOM, LEFT};
@@ -66,10 +73,10 @@ public:
 	MobileGravitatingObject(float x, float y, float mass, float radius=5., float v0x = .0, float v0y = .0):
 	GravitatingObject(x, y, mass, radius), vel{v0x, v0y}, accel{0, 0} {}
 
-	vec<float> v() {
+	vec<float> v() const {
 		return vel;
 	}
-	float v_squared() {
+	float v_squared() const {
 		return vel.modulo();
 	}
 
@@ -115,12 +122,16 @@ public:
 		// And delete itself. That is the next big problem, at the moment 
 		// deleting something from grav_objects is basically unmanageable
 		//col_with->take_damage(dmg) 
-		return;
+
+		//Instakill for testing
+		col_with->kill();
+		erased = true;
 	}
 
 	void on_out_of_bounds(Bounds b) override {
 		// Should probably delete itself as well
 		// Maybe not when locked (if this is even a thing)
+		erased = true;
 	}
 };
 
@@ -131,12 +142,18 @@ protected:
 	int proj_damage;
 	int hp;
 public:
-	Spaceship(float x, float y, float mass, float radius=5., float v0x = .0, float v0y = .0):
+	Spaceship(float x, float y, float mass, float radius=1., float v0x = .0, float v0y = .0):
 	MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.), proj_speed(5.), proj_damage(3), hp(100) {}
 
 	Projectile* fire_projectile() {
-		auto v0 = proj_speed * vel / vel.modulo();
-		return new Projectile(x(), y(), proj_damage, .01, 1., v0.x, v0.y);
+		auto direction = vel / vel.modulo();
+		auto v0 = proj_speed * direction;
+		return new Projectile(x() + radius*(1. + direction.x), y() + radius* (1. + direction.y),
+					proj_damage, .01, 1., vel.x + v0.x, vel.y + v0.y);
+	}
+
+	void kill() override {
+		erased = true;
 	}
 };
 
@@ -146,7 +163,7 @@ private:
 public:
 	vec<float> mouse_shift{0, 0}; // Will be captured each step at some point, for now is just set from main
 
-	Player(float x, float y, float mass=1., float radius=5., float v0x = .0, float v0y = .0):
+	Player(float x, float y, float mass=1., float radius=1., float v0x = .0, float v0y = .0):
 	// MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.)
 	Spaceship(x, y,mass, radius, v0x, v0y), mouse_shift{0., 0.},
 	locked(false), locked_to(shared_ptr<GravitatingObject>(nullptr)) {}
@@ -264,8 +281,8 @@ public:
 			for (unsigned j = 0u; j < grav_objects.size(); ++j)
 			{
 				unsigned Idx = mob_index_in_grav(i);
-				if (!incl_mask[j] || mob_index_in_grav(i) == j) {continue;}
 				resolve_collision(i, j);
+				if (!incl_mask[j] || mob_index_in_grav(i) == j) {continue;}
 				float sc = GAMMA * grav_objects[j]->m() / distance_squared(Idx, j) /distance(Idx, j);
 				auto dr = grav_objects[j]->r() - grav_objects[Idx]->r();
 				mobile_objects[i]->accel += sc * dr;
@@ -281,9 +298,11 @@ public:
 		{
 			mobile_objects[i]->move(dt);
 			resolve_out_of_bounds(i);
+			if (mobile_objects[i]->dead())
+				RemoveMobileObject(i);
 		}
 		for (unsigned i = 0u; i < grav_objects.size(); ++i)
-		{
+		{	
 			resolve_locked(i);
 		}
 	}
@@ -344,6 +363,23 @@ public:
 			mobile_indices[mobile_objects.back().get()] = grav_objects.size() - 1;
 			incl_mask.push_back(false);
 		}
-
 		// Admittedly, I hate that my syntax demands starting constructor params with the include flag 
+
+		void RemoveMobileObject(unsigned mob_i) {
+			unsigned gIdx = mob_index_in_grav(mob_i);
+			mobile_objects.erase(mobile_objects.begin() + mob_i);
+			mobile_indices.erase(mobile_objects[mob_i].get());
+			for (auto &p: mobile_indices) {
+				if (p.second > gIdx) p.second--;
+			}
+			grav_objects.erase(grav_objects.begin() + gIdx);
+		}
+
+		void RemoveFixedObject(unsigned i) {
+			// This REQUIRES the object to be fixed (i.e. present in grav_objects but not in mobile_objects)
+			for (auto &p: mobile_indices) {
+				if (p.second > i) p.second--;
+			}
+			grav_objects.erase(grav_objects.begin() + i);
+		}
 };

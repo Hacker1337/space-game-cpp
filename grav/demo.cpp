@@ -48,6 +48,7 @@ void single_shot(int n_steps, string tag="projectile_demo") {
 	// Same sequence as going to be called on mouse button down
 	Projectile* proj = gs.player()->fire_projectile();
 	gs.AddProjectile(proj);
+	gs.player()->set_vel({0, 0});
 
 	ofstream file("demos/" + tag + ".txt");
 	file<< tag<< '\n';
@@ -60,6 +61,28 @@ void single_shot(int n_steps, string tag="projectile_demo") {
 	man.add(tag);
 }
 
+void shootoff() {
+	GravitySolver gs;
+	gs.AddMobileObject<Spaceship>(false, 100, 100, 1., 1.);
+	gs.player()->set_vel({1, 1});
+	Projectile* proj = gs.player()->fire_projectile();
+	gs.player()->set_vel({0, 0});
+	gs.AddProjectile(proj);
+	cout<< "# of GravObjs: "<< gs.grav_objects.size()<< '\n';
+
+	ofstream file("demos/Shootoff.txt");
+	file<< "Shootoff\n";
+	file << "1 planets at:\n"<< 100<< ' '<< 100<< "\nTrajectory:\n";
+	for (int i = 0; i < 50000; ++i)
+	{
+		file << proj->x()<< ' '<< proj->y()<< '\n';
+		gs.step();
+	}
+	cout<< "# of GravObjs: "<< gs.grav_objects.size();
+	file.close();
+	man.add("Shootoff");
+}
+
 int main(int argc, char **argv) {
 	int n_steps;
 	if (argc >= 1) 
@@ -70,6 +93,7 @@ int main(int argc, char **argv) {
 	single_planet(n_steps, "Low velocity", .5);
 	single_planet(n_steps, "High velocity", 1.5);
 	single_shot(n_steps, "Projectile");
+	shootoff();
 	man.write();
 	return 0;
 }
