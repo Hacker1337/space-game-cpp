@@ -5,7 +5,7 @@
 #include<memory>
 using namespace std;
 
-class GravitatingObject { // Stationary gravitational object abstract class
+class GravitatingObject : public sf::Sprite { // Stationary gravitational object abstract class
 protected:
 	float mass;
 	vec<float> pos;

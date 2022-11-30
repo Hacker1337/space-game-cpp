@@ -16,7 +16,7 @@ int main(int argc, char const *argv[]) {
 
     sf::RenderWindow window(sf::VideoMode(1000, 1000), "Hello From SFML");
 
-    window.setFramerateLimit(60);  // call it once, after creating the window
+    window.setFramerateLimit(600);  // call it once, after creating the window
 
     GravitySolver gs;  // Created the gravity modelling environment
 
@@ -37,6 +37,13 @@ int main(int argc, char const *argv[]) {
                            playerSprite.getGlobalBounds().height / 2);
     playerSprite.setScale(0.1, 0.1);
 
+    gs.player()->setTexture(playerTexture);
+    gs.player()->setOrigin(gs.player()->getGlobalBounds().width / 2,
+                           gs.player()->getGlobalBounds().height / 2);
+    gs.player()->setScale(0.1, 0.1);
+
+    
+
     GravityObjDrawer drawer(gs, playerSprite, window);
 
     sf::Sprite planetSprite;
@@ -55,6 +62,8 @@ int main(int argc, char const *argv[]) {
                            planetSprite.getGlobalBounds().height / 2);
     planetSprite.setScale(0.1, 0.1);
 
+    
+
     gs.player()->mouse_shift = {0, -1};  // Moved the mouse(engines started)
     for (int i = 0; i < 3; ++i) gs.step();
     gs.player()->mouse_shift = {0, 1};  // Changed direction(slowing down)
@@ -63,11 +72,22 @@ int main(int argc, char const *argv[]) {
     for (int i = 0; i < 5; ++i) gs.step();  // Accelerating
     gs.player()->mouse_shift = {0, 0};      // Engines off
     gs.AddFixedObject<Planet>(true, 250, 250, 1000);  // Adding a planet
-    drawer.addObject(planetSprite);
+    gs.grav_objects[gs.grav_objects.size()-1]->setTexture(planetTexture);
+    gs.grav_objects[gs.grav_objects.size()-1]->setOrigin(gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().width / 2,
+                           gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().height / 2);
+    gs.grav_objects[gs.grav_objects.size()-1]->setScale(0.1, 0.1);
+
     gs.AddFixedObject<Planet>(true, 1250, 550, 5000);  // And another one
-    // drawer.addObject(planetSprite);
+    gs.grav_objects[gs.grav_objects.size()-1]->setTexture(planetTexture);
+    gs.grav_objects[gs.grav_objects.size()-1]->setOrigin(gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().width / 2,
+                           gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().height / 2);
+    gs.grav_objects[gs.grav_objects.size()-1]->setScale(0.1, 0.1);
+    
     gs.AddFixedObject<Planet>(true, 2000, 0, 3000);
-    // drawer.addObject(planetSprite);
+    gs.grav_objects[gs.grav_objects.size()-1]->setTexture(planetTexture);
+    gs.grav_objects[gs.grav_objects.size()-1]->setOrigin(gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().width / 2,
+                           gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().height / 2);
+    gs.grav_objects[gs.grav_objects.size()-1]->setScale(0.1, 0.1);
 
     while (window.isOpen()) {
         sf::Event event;
