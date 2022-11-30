@@ -1,79 +1,90 @@
 #include <SFML/Graphics.hpp>
+#include <fstream>
 #include <iostream>
-#include<fstream>
-#include<vector>
-#include<string>
-#include"gravity_model.cpp"
+#include <map>
+#include <string>
+#include <vector>
+
+#include "gravity_model.cpp"
 #include "GravityObjDrawer.cpp"
 
 using Planet = GravitatingObject;
 using namespace std;
 
-int main(int argc, char const *argv[])
-{
-	
+int main(int argc, char const *argv[]) {
+    map<string, sf::Texture> textures;
 
-    sf::RenderWindow window(sf::VideoMode(1000,1000), "Hello From SFML");
+    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Hello From SFML");
 
-    window.setFramerateLimit(60); // call it once, after creating the window
+    window.setFramerateLimit(60);  // call it once, after creating the window
 
+    GravitySolver gs;  // Created the gravity modelling environment
 
-    GravitySolver gs; // Created the gravity modelling environment
-
+    string texture_path = "img/rocket_white.png";
     sf::Texture playerTexture;
-    if (!playerTexture.loadFromFile("img/rocket_white.png"))
-    {
-        // error...
+    if (!textures.count(texture_path)) {
+        if (!playerTexture.loadFromFile(texture_path)) {
+            // error...
+        }
+        textures[texture_path] = playerTexture;
+    } else {
+        playerTexture = textures[texture_path];
     }
     playerTexture.setSmooth(true);
     sf::Sprite playerSprite;
     playerSprite.setTexture(playerTexture);
-    playerSprite.setOrigin(playerSprite.getGlobalBounds().width/2, playerSprite.getGlobalBounds().height/2);
+    playerSprite.setOrigin(playerSprite.getGlobalBounds().width / 2,
+                           playerSprite.getGlobalBounds().height / 2);
     playerSprite.setScale(0.1, 0.1);
 
     GravityObjDrawer drawer(gs, playerSprite, window);
 
     sf::Sprite planetSprite;
     sf::Texture planetTexture;
-    if (!planetTexture.loadFromFile("img/planet.png"))
-    {
-        // error...
+    texture_path = "img/planet.png";
+    if (!textures.count(texture_path)) {
+        if (!planetTexture.loadFromFile(texture_path)) {
+            // error...
+        }
+        textures[texture_path] = planetTexture;
+    } else {
+        planetTexture = textures[texture_path];
     }
     planetSprite.setTexture(planetTexture);
-    planetSprite.setOrigin(planetSprite.getGlobalBounds().width/2, planetSprite.getGlobalBounds().height/2);
+    planetSprite.setOrigin(planetSprite.getGlobalBounds().width / 2,
+                           planetSprite.getGlobalBounds().height / 2);
     planetSprite.setScale(0.1, 0.1);
 
-	gs.player()->mouse_shift = {0, -1}; // Moved the mouse(engines started)
-	for(int i = 0; i < 3; ++i) gs.step();
-	gs.player()->mouse_shift = {0, 1}; // Changed direction(slowing down)
-	for(int i = 0; i < 2; ++i) gs.step();
-	gs.player()->mouse_shift = {-1, 0}; // Now, moving along the x axis
-	for(int i = 0; i < 5; ++i) gs.step(); // Accelerating
-	gs.player()->mouse_shift = {0, 0}; // Engines off
-	gs.AddFixedObject<Planet>(true, 250, 250, 1000); // Adding a planet
+    gs.player()->mouse_shift = {0, -1};  // Moved the mouse(engines started)
+    for (int i = 0; i < 3; ++i) gs.step();
+    gs.player()->mouse_shift = {0, 1};  // Changed direction(slowing down)
+    for (int i = 0; i < 2; ++i) gs.step();
+    gs.player()->mouse_shift = {-1, 0};     // Now, moving along the x axis
+    for (int i = 0; i < 5; ++i) gs.step();  // Accelerating
+    gs.player()->mouse_shift = {0, 0};      // Engines off
+    gs.AddFixedObject<Planet>(true, 250, 250, 1000);  // Adding a planet
     drawer.addObject(planetSprite);
-	gs.AddFixedObject<Planet>(true, 1250, 550, 5000); // And another one
+    gs.AddFixedObject<Planet>(true, 1250, 550, 5000);  // And another one
     // drawer.addObject(planetSprite);
-	gs.AddFixedObject<Planet>(true, 2000, 0, 3000);
+    gs.AddFixedObject<Planet>(true, 2000, 0, 3000);
     // drawer.addObject(planetSprite);
 
-
-    while (window.isOpen())
-    {
+    while (window.isOpen()) {
         sf::Event event;
-        while (window.pollEvent(event))
-        {
-            if(event.type == sf::Event::Closed){
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
                 window.close();
             }
         }
 
         // get the local mouse position (relative to a window)
-        sf::Vector2i localPosition = sf::Mouse::getPosition(window); 
+        sf::Vector2i localPosition = sf::Mouse::getPosition(window);
         // std::cout << localPosition.x << " " << localPosition.y << std::endl;
-        vec<float> mouseVector({localPosition.x - playerSprite.getOrigin().x, localPosition.y - playerSprite.getOrigin().y});
-        float angle = atan2(mouseVector.y, mouseVector.x)*180/3.1415;
-        // cout << mouseVector.x << " " << mouseVector.y << " " << angle << endl;
+        vec<float> mouseVector({localPosition.x - playerSprite.getOrigin().x,
+                                localPosition.y - playerSprite.getOrigin().y});
+        float angle = atan2(mouseVector.y, mouseVector.x) * 180 / 3.1415;
+        // cout << mouseVector.x << " " << mouseVector.y << " " << angle <<
+        // endl;
         drawer.setRocketRotation(angle);
         gs.step();
 
@@ -84,7 +95,6 @@ int main(int argc, char const *argv[])
         // window.draw(planetSprite);
 
         window.display();
-        
     }
 
     return 0;
