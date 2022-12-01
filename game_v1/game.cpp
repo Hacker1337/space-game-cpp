@@ -25,7 +25,7 @@ int main(int argc, char const *argv[]) {
     background.setTexture(background_texture);
     
     background.setScale(window.getSize().x/background_texture.getSize().x, window.getSize().y/background_texture.getSize().y);
-    window.setFramerateLimit(600);  // call it once, after creating the window
+    window.setFramerateLimit(120);  // call it once, after creating the window
 
     GravitySolver gs;  // Created the gravity modelling environment
 
@@ -112,6 +112,8 @@ int main(int argc, char const *argv[]) {
         vec<float> mouseVector({localPosition.x - playerSprite.getOrigin().x,
                                 localPosition.y - playerSprite.getOrigin().y});
         float angle = atan2(mouseVector.y, mouseVector.x) * 180 / 3.1415;
+        // mouseVector = mouseVector*(1/window.getSize().x);
+        gs.player()->mouse_shift = {mouseVector.x/window.getSize().x, mouseVector.y/window.getSize().x};
         // cout << mouseVector.x << " " << mouseVector.y << " " << angle <<
         // endl;
         drawer.setRocketRotation(angle);

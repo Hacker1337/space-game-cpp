@@ -110,7 +110,7 @@ public:
 	vec<float> mouse_shift{0, 0}; // Will be captured each step at some point, for now is just set from main
 
 	Player(float x, float y, float v0x = .0, float v0y = .0, float mass=1.):
-	MobileGravitatingObject(x, y, v0x, v0y, mass), jet_accel_mod(2.), mouse_shift{0., 0.},
+	MobileGravitatingObject(x, y, v0x, v0y, mass), jet_accel_mod(0.2), mouse_shift{0., 0.},
 	locked(false), locked_to(shared_ptr<GravitatingObject>(nullptr)) {}
 
 	vec<float> add_jet_accel() {
@@ -118,7 +118,7 @@ public:
 		// For now, applying a fixed force in the direction specified by the mouse 
 		if (mouse_shift == vec<float>{0, 0}) return {0, 0};
 
-		vec<float> jet_accel = jet_accel_mod* (-mouse_shift)/mouse_shift.modulo(); 
+		vec<float> jet_accel = jet_accel_mod* (mouse_shift); 
 		accel += jet_accel;
 		return jet_accel;
 	}
