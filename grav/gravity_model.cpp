@@ -157,7 +157,7 @@ public:
 	Spaceship(float x, float y, float mass, float radius=1., float v0x = .0, float v0y = .0):
 	MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.), proj_speed(5.), proj_damage(3), hp(100) {}
 
-	Projectile* fire_projectile() {
+	virtual Projectile* fire_projectile() {
 		auto direction = vel / vel.modulo(); // Invalid when vel = 0
 		// This is fairly impossible in-game, but may need fixing
 		auto v0 = proj_speed * direction;
@@ -191,6 +191,16 @@ public:
 	void upd_mouse_shift() { 
 		// When locked onto object, orbit it as high as possible until player resolves the lock-on
 		return;
+	}
+
+	virtual Projectile* fire_projectile() override {
+		vec<float> direction;
+		if (mouse_shift.modulo() != 0)
+			direction = mouse_shift/mouse_shift.modulo();
+		else  direction = vel / vel.modulo();
+		auto v0 = proj_speed * direction;
+		return new Projectile(x() + radius*(direction.x), y() + radius* (direction.y),
+					proj_damage, 1., 1., vel.x + v0.x, vel.y + v0.y);
 	}
 
 	void on_collision(shared_ptr<GravitatingObject> col_with) {
