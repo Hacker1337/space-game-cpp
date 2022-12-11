@@ -42,20 +42,23 @@ void single_planet(int n_steps, string tag="gravity_demo", float vel_coef = 1) {
 
 void single_shot(int n_steps, string tag="projectile_demo") {
 	GravitySolver gs;
-	gs.AddFixedObject<Planet>(true, 250, 250, 1000, 5.);
-	gs.player()->set_vel({10, 0});
-	for (int i = 0; i < 1000; ++i) gs.step();
+	gs.player()->set_pos({500, 500});
+	gs.AddFixedObject<Planet>(true, 600, 600, 1000, 5.);
+	gs.player()->set_vel({.25, 0});
+	//for (int i = 0; i < 1000; ++i) gs.step();
 	// Same sequence as going to be called on mouse button down
 	Projectile* proj = gs.player()->fire_projectile();
 	gs.AddProjectile(proj);
 	gs.player()->set_vel({0, 0});
+	gs.player()->set_pos({0, 0});
 
 	ofstream file("demos/" + tag + ".txt");
 	file<< tag<< '\n';
-	file << "1 planets at:\n"<< 250<< ' '<< 250<< "\nTrajectory:\n";
+	file << "1 planets at:\n"<< 600<< ' '<< 600<< "\nTrajectory:\n";
 	for(int i = 0; i < n_steps; ++i) {
 		file<< proj->x()<< ' '<< proj->y()<< '\n';
 		gs.step();
+		gs.player()->set_vel({0, 0});
 	}
 	file.close();
 	man.add(tag);
@@ -72,7 +75,7 @@ void shootoff() {
 
 	ofstream file("demos/Shootoff.txt");
 	file<< "Shootoff\n";
-	file << "1 planets at:\n"<< 100<< ' '<< 100<< "\nTrajectory:\n";
+	file << "1 ships at:\n"<< 100<< ' '<< 100<< "\nTrajectory:\n";
 	for (int i = 0; i < 50000; ++i)
 	{
 		file << proj->x()<< ' '<< proj->y()<< '\n';
@@ -88,7 +91,9 @@ int main(int argc, char **argv) {
 	if (argc >= 1) 
 		n_steps = atoi(argv[1]);
 	if (n_steps == 0) n_steps = 10000;
+	cout<< "Making "<< n_steps<< " steps\n";
 
+	single_planet(n_steps, "Falling", 0);
 	single_planet(n_steps, "Circle trajectory", 1);
 	single_planet(n_steps, "Low velocity", .5);
 	single_planet(n_steps, "High velocity", 1.5);

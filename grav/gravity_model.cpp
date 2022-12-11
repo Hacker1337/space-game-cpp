@@ -1,9 +1,12 @@
 #include<vector>
+#include<cmath>
 #include<map>
 #include"vec.cpp"
 
 #include<memory>
 using namespace std;
+
+const float GAMMA = 5;
 
 class GravitatingObject { // Stationary gravitational object abstract class
 protected:
@@ -84,6 +87,10 @@ public:
 		vel = v;
 	}
 
+	void set_pos(vec<float> r) {
+		pos = r;
+	}
+
 	// Integrator may well need to be modified(movement animations/attenuation)
 	virtual void move(const float& dt) {
 		// Naive integration okay for the goals we pursue
@@ -92,15 +99,20 @@ public:
 		vel += accel * dt;
 	}
 
+	virtual void vel_verlet_halfstep(const float& dt) {
+		// To be called before acceleration recalculation
+		vel += 0.5*accel*dt;
+		pos += vel*dt;
+	}
+
+	virtual void vel_verlet_endstep(const float& dt) {
+		// To be called after accel_calc
+		vel += 0.5*accel*dt;
+	}
+
 	// Object-specific event-bound functions
 	virtual void on_collision(shared_ptr<GravitatingObject> col_with) {
 		// To process landings
-		return;
-	}
-
-	virtual void on_locked(shared_ptr<GravitatingObject> locked_to) {
-		// To process low-velocity states where jet acceleration is 
-		// not sufficient to leave an object's gravitational field
 		return;
 	}
 
@@ -146,10 +158,11 @@ public:
 	MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.), proj_speed(5.), proj_damage(3), hp(100) {}
 
 	Projectile* fire_projectile() {
-		auto direction = vel / vel.modulo();
+		auto direction = vel / vel.modulo(); // Invalid when vel = 0
+		// This is fairly impossible in-game, but may need fixing
 		auto v0 = proj_speed * direction;
 		return new Projectile(x() + radius*(1. + direction.x), y() + radius* (1. + direction.y),
-					proj_damage, .01, 1., vel.x + v0.x, vel.y + v0.y);
+					proj_damage, 1., 1., vel.x + v0.x, vel.y + v0.y);
 	}
 
 	void kill() override {
@@ -158,52 +171,45 @@ public:
 };
 
 class Player final: public Spaceship {
-private:
-	bool locked; shared_ptr<GravitatingObject> locked_to; // To track the object it can't leave
 public:
 	vec<float> mouse_shift{0, 0}; // Will be captured each step at some point, for now is just set from main
 
-	Player(float x, float y, float mass=1., float radius=1., float v0x = .0, float v0y = .0):
+	Player(float x, float y, float mass=10., float radius=1., float v0x = .0, float v0y = .0):
 	// MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.)
-	Spaceship(x, y,mass, radius, v0x, v0y), mouse_shift{0., 0.},
-	locked(false), locked_to(shared_ptr<GravitatingObject>(nullptr)) {}
+	Spaceship(x, y,mass, radius, v0x, v0y), mouse_shift{0., 0.} {}
 
 	vec<float> add_jet_accel() {
 		upd_mouse_shift(); // A suitable place to update the mouse_shift field
 		// For now, applying a fixed force in the direction specified by the mouse 
 		if (mouse_shift == vec<float>{0, 0}) return {0, 0};
 
-		vec<float> jet_accel = jet_accel_mod* (-mouse_shift)/mouse_shift.modulo(); 
+		vec<float> jet_accel = jet_accel_mod* mouse_shift; 
 		accel += jet_accel;
 		return jet_accel;
 	}
 
 	void upd_mouse_shift() { 
 		// When locked onto object, orbit it as high as possible until player resolves the lock-on
-		if (locked) mouse_shift = locked_to->r() - pos; 
+		return;
 	}
 
-	void on_locked(shared_ptr<GravitatingObject> new_locked_to) override {
-		if (locked && new_locked_to == locked_to) return;
-		locked = true;
-		this->locked_to = new_locked_to;
-	}
-	void unlock() { 
-		locked = false;
-		locked_to = nullptr;
+	void on_collision(shared_ptr<GravitatingObject> col_with) {
+		vec<float> d = r() - col_with->r();
+		vec<float> v1 = sqrt(GAMMA*col_with->m()/col_with->size()) * d/d.modulo();
+		set_vel(v1);
 	}
 };
 
 class GravitySolver final {
 private: 
-	const double GAMMA = 5; 
+	const float dt = .01;	//Should regulate game speed and model accuracy
 
-	const double dt = .01;	//Should regulate game speed and model accuracy
-
-	const double X_BOUND, Y_BOUND; // To check when objects tresspass
+	const float X_BOUND, Y_BOUND; // To check when objects tresspass
 	//using enum Bounds;
 
-	double vis_x = 500, vis_y = 500;
+	float vis_x = 500, vis_y = 500;
+
+	const bool VERLET = true;
 public:
 	vector<shared_ptr<GravitatingObject>> grav_objects; // All that gravitates
 	vector<shared_ptr<MobileGravitatingObject>> mobile_objects; // Separate vector of pointers to objects that move
@@ -263,17 +269,6 @@ public:
 			}
 		}
 
-		// Only for the player ship for now
-		void resolve_locked(unsigned i) {
-			// auto vsq = player()->v_squared();
-			// float d;
-			// if (vsq == 0.) d = distance(0, i);
-			// else d = 0.25 /GAMMA *player()->m()/grav_objects[i]->m()* vsq* vsq;
-			// if (d < GAMMA* grav_objects[i]->m() ) {
-			// 	player()->on_locked(grav_objects[i]);
-			// }
-		}
-
 	// System-of-bodies-level calculations
 	void calculate_accels() {
 		for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
@@ -293,17 +288,30 @@ public:
 
 	void step() {
 		epoch++;
-		calculate_accels();
-		for (unsigned i = 0u; i < mobile_objects.size(); ++i)
-		{
-			mobile_objects[i]->move(dt);
-			resolve_out_of_bounds(i);
+		// Delete dead
+		for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
 			if (mobile_objects[i]->dead())
 				RemoveMobileObject(i);
 		}
-		for (unsigned i = 0u; i < grav_objects.size(); ++i)
-		{	
-			resolve_locked(i);
+
+		// Use verlet integration
+		if (VERLET) {
+			for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
+				mobile_objects[i]->vel_verlet_halfstep(dt);
+				resolve_out_of_bounds(i);
+			} calculate_accels();
+			for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
+				mobile_objects[i]->vel_verlet_endstep(dt);
+			}
+		}
+		// Or Euler, and cope with your second-order errors
+		else {
+			calculate_accels();
+			for (unsigned i = 0u; i < mobile_objects.size(); ++i)
+			{
+				mobile_objects[i]->move(dt);
+				resolve_out_of_bounds(i);
+			}
 		}
 	}
 
@@ -324,19 +332,6 @@ public:
 			// Converts the index of an obj in mobile_objects to 
 			// the corresponding index in grav_objects
 			return mobile_indices[mobile_objects[mob_i].get()];
-		}
-
-		vector<GravitatingObject*> visible() {
-			vector<GravitatingObject*> res;
-			for (unsigned i = 0u; i < grav_objects.size(); ++i) {
-				auto dx = player()->x() - grav_objects[i]->x();
-				auto dy = player()->y() - grav_objects[i]->y();
-				if (dx > -vis_x/2 && dx < vis_x/2 
-						&& dy > -vis_y/2 && dy < vis_y/2) {
-					res.push_back(grav_objects[i].get());
-				} 
-			}
-			return res;
 		}
 	
 	// Changing the composition of the object lists
@@ -361,7 +356,7 @@ public:
 			grav_objects.push_back(shared_ptr<Projectile>(nullptr));
 			grav_objects.back() = mobile_objects.back();
 			mobile_indices[mobile_objects.back().get()] = grav_objects.size() - 1;
-			incl_mask.push_back(false);
+			incl_mask.push_back(true);
 		}
 		// Admittedly, I hate that my syntax demands starting constructor params with the include flag 
 
@@ -381,5 +376,10 @@ public:
 				if (p.second > i) p.second--;
 			}
 			grav_objects.erase(grav_objects.begin() + i);
+		}
+
+		void shoot() {
+			Projectile* proj = player()->fire_projectile();
+			AddProjectile(proj);
 		}
 };
