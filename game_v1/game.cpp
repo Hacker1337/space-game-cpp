@@ -24,12 +24,13 @@ int main(int argc, char const *argv[]) {
     sf::Sprite background;
     background.setTexture(background_texture);
     
-    background.setScale(window.getSize().x/background_texture.getSize().x, window.getSize().y/background_texture.getSize().y);
+    background.setScale((window.getSize().x+0.0)/background_texture.getSize().x, (window.getSize().y+0.0)/background_texture.getSize().y);
+
     window.setFramerateLimit(120);  // call it once, after creating the window
 
     GravitySolver gs;  // Created the gravity modelling environment
 
-    string texture_path = "img/rocket_white.png";
+    string texture_path = "img/rocket.png";
     sf::Texture playerTexture;
     if (!textures.count(texture_path)) {
         if (!playerTexture.loadFromFile(texture_path)) {
@@ -40,11 +41,7 @@ int main(int argc, char const *argv[]) {
         playerTexture = textures[texture_path];
     }
     playerTexture.setSmooth(true);
-    sf::Sprite playerSprite;
-    playerSprite.setTexture(playerTexture);
-    playerSprite.setOrigin(playerSprite.getGlobalBounds().width / 2,
-                           playerSprite.getGlobalBounds().height / 2);
-    playerSprite.setScale(0.1, 0.1);
+
 
     gs.player()->setTexture(playerTexture);
     gs.player()->setOrigin(gs.player()->getGlobalBounds().width / 2,
@@ -57,7 +54,7 @@ int main(int argc, char const *argv[]) {
 
     sf::Sprite planetSprite;
     sf::Texture planetTexture;
-    texture_path = "img/planet.png";
+    texture_path = "img/finish.png";
     if (!textures.count(texture_path)) {
         if (!planetTexture.loadFromFile(texture_path)) {
             // error...
@@ -73,13 +70,7 @@ int main(int argc, char const *argv[]) {
 
     
 
-    gs.player()->mouse_shift = {0, -1};  // Moved the mouse(engines started)
-    for (int i = 0; i < 3; ++i) gs.step();
-    gs.player()->mouse_shift = {0, 1};  // Changed direction(slowing down)
-    for (int i = 0; i < 2; ++i) gs.step();
-    gs.player()->mouse_shift = {-1, 0};     // Now, moving along the x axis
-    for (int i = 0; i < 5; ++i) gs.step();  // Accelerating
-    gs.player()->mouse_shift = {0, 0};      // Engines off
+    
     gs.AddFixedObject<Planet>(true, 250, 250, 1000);  // Adding a planet
     gs.grav_objects[gs.grav_objects.size()-1]->setTexture(planetTexture);
     gs.grav_objects[gs.grav_objects.size()-1]->setOrigin(gs.grav_objects[gs.grav_objects.size()-1]->getGlobalBounds().width / 2,
@@ -108,14 +99,10 @@ int main(int argc, char const *argv[]) {
 
         // get the local mouse position (relative to a window)
         sf::Vector2i localPosition = sf::Mouse::getPosition(window);
-        // std::cout << localPosition.x << " " << localPosition.y << std::endl;
-        vec<float> mouseVector({localPosition.x - playerSprite.getOrigin().x,
-                                localPosition.y - playerSprite.getOrigin().y});
+        vec<float> mouseVector({localPosition.x - gs.player()->getPosition().x,
+                                localPosition.y - gs.player()->getPosition().y});
         float angle = atan2(mouseVector.y, mouseVector.x) * 180 / 3.1415;
-        // mouseVector = mouseVector*(1/window.getSize().x);
         gs.player()->mouse_shift = {mouseVector.x/window.getSize().x, mouseVector.y/window.getSize().x};
-        // cout << mouseVector.x << " " << mouseVector.y << " " << angle <<
-        // endl;
         drawer.setRocketRotation(angle);
         gs.step();
 
