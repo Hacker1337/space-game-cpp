@@ -155,6 +155,7 @@ public:
 		// Should probably delete itself as well
 		// Maybe not when locked (if this is even a thing)
 		//erased = true;
+        return;
 	}
 };
 
@@ -218,6 +219,7 @@ public:
 		vec<float> d = r() - col_with->r();
 		vec<float> v1 = sqrt(GAMMA*col_with->m()/col_with->size()) * d/d.modulo();
 		set_vel(v1);
+        //cout<< "Projectile collision at "<< col_with->r()<< "\n";
 	}
 
 	void kill() override {
@@ -304,6 +306,9 @@ public:
 
 	// System-of-bodies-level calculations
 	void calculate_accels() {
+        //cout<< "_______________\n";
+        //for (unsigned j = 0u; j < grav_objects.size(); ++j)
+            //cout<< distance(0, j)<< '\n';
 		for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
 			mobile_objects[i]->accel = {0, 0};
 			for (unsigned j = 0u; j < grav_objects.size(); ++j)
@@ -320,11 +325,12 @@ public:
 	}
 
 	void step() {
+        //cout<< "We at "<<player()->accel<< '\n';
 		epoch++;
 		// Delete dead
 		for (unsigned i = 0u; i < mobile_objects.size(); ++i) {
 			if (mobile_objects[i]->dead())
-				RemoveMobileObject(i);
+			    	RemoveMobileObject(i);
 		}
 
 		// Use verlet integration
@@ -392,7 +398,7 @@ public:
 			grav_objects.push_back(shared_ptr<Projectile>(nullptr));
 			grav_objects.back() = mobile_objects.back();
 			mobile_indices[mobile_objects.back().get()] = grav_objects.size() - 1;
-			incl_mask.push_back(true);
+			incl_mask.push_back(false);
 			p->setTexture(projectile_texture);
 			p->setOrigin(p->getGlobalBounds().width / 2,
                                     p->getGlobalBounds().height / 2);
@@ -404,6 +410,7 @@ public:
 			unsigned gIdx = mob_index_in_grav(mob_i);
 			mobile_indices.erase(mobile_objects[mob_i].get());
 			mobile_objects.erase(mobile_objects.begin() + mob_i);
+            incl_mask.erase(incl_mask.begin() + gIdx);
 			for (auto &p: mobile_indices) {
 				if (p.second > gIdx) p.second--;
 			}
@@ -416,6 +423,7 @@ public:
 				if (p.second > i) p.second--;
 			}
 			grav_objects.erase(grav_objects.begin() + i);
+            incl_mask.erase(incl_mask.begin() + i);
 		}
 
 		void shoot() {
