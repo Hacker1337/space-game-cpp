@@ -1,7 +1,7 @@
 #include<fstream>
 #include<vector>
 #include<string>
-#include"gravity_model.cpp"
+#include "../src/gravity_model.cpp"
 using Planet = GravitatingObject;
 using namespace std;
 

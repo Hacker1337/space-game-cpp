@@ -1,6 +1,5 @@
-compile:./game.cpp
-	g++ -c ./game.cpp
-	g++ game.o -o app -lsfml-graphics -lsfml-window -lsfml-system
+compile:src/game.cpp
+	g++ src/game.cpp -o app -lsfml-graphics -lsfml-window -lsfml-system
 
 run:
 	./app
