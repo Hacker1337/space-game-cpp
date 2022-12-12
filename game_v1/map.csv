@@ -1,6 +1,6 @@
 Obj Type,x,y,m,img path,image scale factor,Radius
 Player,0,0,0,img/rocket.png,0.1,
-Planet,250,250,1000,img/p3.png,1,5
-Planet,1250,550,5000,img/p3.png,1,5
-Planet,2000,0,3000,img/p3.png,1,5
+Planet,250,250,1000,img/p3.png,1,100
+Planet,1250,550,5000,img/p3.png,1,100
+Planet,2000,0,3000,img/p3.png,1,100
 Shoot,0,0,0,img/p4.png,0.1,

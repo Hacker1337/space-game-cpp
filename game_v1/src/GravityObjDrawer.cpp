@@ -22,7 +22,8 @@ class GravityObjDrawer {
         for (int i = 1; i < gs.grav_objects.size(); i++)
         {
             auto rel_coord = (gs.grav_objects[i]->r()-gs.grav_objects[0]->r())*scale;
-            if (2*rel_coord.x < window.getSize().x and 2*rel_coord.y < window.getSize().y) {
+            if (2*rel_coord.x < window.getSize().x + 10*gs.grav_objects[i]->size()*scale and 2*rel_coord.y < window.getSize().y + 10*gs.grav_objects[i]->size()*scale
+            and rel_coord.x + 10*gs.grav_objects[i]->size()*scale > 0 and rel_coord.y + 10*gs.grav_objects[i]->size()*scale > 0 ) {
                 gs.grav_objects[i]->setPosition(gs.grav_objects[0]->getOrigin()+sf::Vector2f(rel_coord.x, rel_coord.y));
                 window.draw(*gs.grav_objects[i]);
             }
