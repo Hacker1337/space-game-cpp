@@ -57,8 +57,8 @@ void single_shot(int n_steps, string tag="projectile_demo") {
 	file << "1 planets at:\n"<< 600<< ' '<< 600<< "\nTrajectory:\n";
 	for(int i = 0; i < n_steps; ++i) {
 		file<< proj->x()<< ' '<< proj->y()<< '\n';
-		gs.step();
 		gs.player()->set_vel({0, 0});
+		gs.step();
 	}
 	file.close();
 	man.add(tag);
@@ -69,19 +69,26 @@ void shootoff() {
 	gs.AddMobileObject<Spaceship>(false, 100, 100, 1., 1.);
 	gs.player()->set_vel({1, 1});
 	Projectile* proj = gs.player()->fire_projectile();
-	gs.player()->set_vel({0, 0});
+	gs.player()->set_vel({-100, -100});
 	gs.AddProjectile(proj);
+	gs.AddFixedObject<Planet>(true, 500, 500, 100., 10.);
 	cout<< "# of GravObjs: "<< gs.grav_objects.size()<< '\n';
+	for (auto go: gs.grav_objects) {
+		cout<< go->r()<< '\n';
+	}
 
 	ofstream file("demos/Shootoff.txt");
 	file<< "Shootoff\n";
-	file << "1 ships at:\n"<< 100<< ' '<< 100<< "\nTrajectory:\n";
+	file << "2 planets at:\n100 100\n500 500\nTrajectory:\n";
 	for (int i = 0; i < 50000; ++i)
 	{
 		file << proj->x()<< ' '<< proj->y()<< '\n';
 		gs.step();
 	}
 	cout<< "# of GravObjs: "<< gs.grav_objects.size();
+	for (auto go: gs.grav_objects) {
+		cout<< go->r()<< '\n';
+	}
 	file.close();
 	man.add("Shootoff");
 }

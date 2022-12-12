@@ -59,6 +59,9 @@ public:
 	}
 
 	virtual void kill() {return;}
+
+	// Enables us to set limited lifetimes, changes in appearance, etc
+	virtual void update_state() {return;}
 };
 
 enum class Bounds {TOP, RIGHT, BOTTOM, LEFT};
@@ -95,11 +98,13 @@ public:
 	virtual void move(const float& dt) {
 		// Naive integration okay for the goals we pursue
 		// VERLET
+		update_state();
 		pos += vel * dt + 0.5*accel*dt*dt;
 		vel += accel * dt;
 	}
 
 	virtual void vel_verlet_halfstep(const float& dt) {
+		update_state();
 		// To be called before acceleration recalculation
 		vel += 0.5*accel*dt;
 		pos += vel*dt;
@@ -124,10 +129,16 @@ public:
 
 class Projectile final: public MobileGravitatingObject {
 private:
-	int damage;
+	int damage; unsigned lifetime = 1000; unsigned time_lived = 0;
 public:
 	Projectile(float x, float y, int dmg, float mass, float radius, float vx0, float vy0): 
 	MobileGravitatingObject(x, y, mass, radius, vx0, vy0), damage(dmg) {}
+
+	void update_state() override {
+		++time_lived;
+		if (time_lived > lifetime) 
+			erased = true;
+	}
 
 	void on_collision(shared_ptr<GravitatingObject> col_with) override {
 		// Has to deal damage (should change the signature for that to be possible)
@@ -143,7 +154,7 @@ public:
 	void on_out_of_bounds(Bounds b) override {
 		// Should probably delete itself as well
 		// Maybe not when locked (if this is even a thing)
-		erased = true;
+		//erased = true;
 	}
 };
 
@@ -207,6 +218,10 @@ public:
 		vec<float> d = r() - col_with->r();
 		vec<float> v1 = sqrt(GAMMA*col_with->m()/col_with->size()) * d/d.modulo();
 		set_vel(v1);
+	}
+
+	void kill() override {
+		return;
 	}
 };
 
@@ -372,8 +387,8 @@ public:
 
 		void RemoveMobileObject(unsigned mob_i) {
 			unsigned gIdx = mob_index_in_grav(mob_i);
-			mobile_objects.erase(mobile_objects.begin() + mob_i);
 			mobile_indices.erase(mobile_objects[mob_i].get());
+			mobile_objects.erase(mobile_objects.begin() + mob_i);
 			for (auto &p: mobile_indices) {
 				if (p.second > gIdx) p.second--;
 			}
