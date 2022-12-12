@@ -88,7 +88,9 @@ void loadMap(const string& file_name, map<string, sf::Texture>& texture_map, Gra
         }
         else {
             if (type == "Planet") {
-                gs.AddFixedObject<Planet>(true, x, y, m);  // Adding a planet
+                float r = stof(row[6]);
+
+                gs.AddFixedObject<Planet>(true, x, y, m, r);  // Adding a planet
                 auto planet = gs.grav_objects[gs.grav_objects.size()-1];
                 // setting planet image
                 planet->setTexture(texture_map[image_path]);
