@@ -1,5 +1,6 @@
 #include<vector>
 #include<map>
+#include<cmath>
 #include"vec.cpp"
 #include <SFML/Graphics.hpp>
 #include<memory>
@@ -219,6 +220,9 @@ private:
 	float vis_x = 500, vis_y = 500;
 
 	const bool VERLET = true;
+
+	sf::Texture projectile_texture;
+	float projectile_size;
 public:
 	vector<shared_ptr<GravitatingObject>> grav_objects; // All that gravitates
 	vector<shared_ptr<MobileGravitatingObject>> mobile_objects; // Separate vector of pointers to objects that move
@@ -236,6 +240,11 @@ public:
 	}
 	GravitySolver(unsigned w, unsigned h): X_BOUND(w), Y_BOUND(h) {
 		AddMobileObject<Player>(false, 0, 0); // There is always the player
+	}
+
+	void set_projectile_texture(sf::Texture& texture, float scale_factor) {
+		projectile_texture = texture;
+		projectile_size = scale_factor;
 	}
 public:
 	// Once again, no copying semantics
@@ -366,6 +375,10 @@ public:
 			grav_objects.back() = mobile_objects.back();
 			mobile_indices[mobile_objects.back().get()] = grav_objects.size() - 1;
 			incl_mask.push_back(true);
+			p->setTexture(projectile_texture);
+			p->setOrigin(p->getGlobalBounds().width / 2,
+                                    p->getGlobalBounds().height / 2);
+			p->setScale(projectile_size, projectile_size);
 		}
 		// Admittedly, I hate that my syntax demands starting constructor params with the include flag 
 
