@@ -140,6 +140,7 @@ int main(int argc, char const *argv[]) {
         float angle = atan2(mouseVector.y, mouseVector.x) * 180 / 3.1415;
         gs.player()->mouse_shift = {mouseVector.x/window.getSize().x, mouseVector.y/window.getSize().x};
         drawer.setRocketRotation(angle);
+        drawer.setFire(angle, mouseVector.modulo());
 
         sf::Event event;
         while (window.pollEvent(event)) {
