@@ -345,6 +345,9 @@ public:
 		Player* player() {
 			return dynamic_cast<Player*>(mobile_objects.front().get());
 		} 
+		Player const* player() const {
+			return dynamic_cast<Player*>(mobile_objects.front().get());
+		} 
 
 		unsigned mob_index_in_grav(unsigned mob_i) {
 			// Converts the index of an obj in mobile_objects to 
