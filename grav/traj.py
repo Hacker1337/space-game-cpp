@@ -8,6 +8,7 @@ for dump in dumps:
     x = []
     y = []
     planets = [[], []]
+    print(f'''Processing file "{dump}"... ''', end='')
     with open(f"demos/{dump}.txt", 'r') as file:
         title = file.readline()
         line = file.readline()
@@ -20,8 +21,11 @@ for dump in dumps:
         while (line := file.readline()) != '':
             x.append(float((line.strip().split() + [0])[0]))
             y.append(float((line.strip().split() + [0, 0])[1]))
+    print("Plotting... ", end='')
     plt.figure(figsize=(10, 10))
     plt.title(title)
     plt.plot(x, y)
     plt.scatter(*planets)
     plt.savefig(f"demos/{dump}.png")
+    print("Done.")
+
