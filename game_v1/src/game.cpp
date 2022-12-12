@@ -152,6 +152,11 @@ int main(int argc, char const *argv[]) {
                 sf::Vector2i localPosition = sf::Mouse::getPosition(window);
                 gs.shoot();
             }
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+            {
+                vec<float> coord = gs.player()->r();
+                cout << coord.x << " " << coord.y << endl;
+            }
         }
 
         gs.step();

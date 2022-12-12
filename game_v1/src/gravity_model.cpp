@@ -59,6 +59,9 @@ public:
 	}
 
 	virtual void kill() {return;}
+
+	// Enables us to set limited lifetimes, changes in appearance, etc
+	virtual void update_state() {return;}
 };
 
 enum class Bounds {TOP, RIGHT, BOTTOM, LEFT};
@@ -95,11 +98,13 @@ public:
 	virtual void move(const float& dt) {
 		// Naive integration okay for the goals we pursue
 		// VERLET
+		update_state();
 		pos += vel * dt + 0.5*accel*dt*dt;
 		vel += accel * dt;
 	}
 
 	virtual void vel_verlet_halfstep(const float& dt) {
+		update_state();
 		// To be called before acceleration recalculation
 		vel += 0.5*accel*dt;
 		pos += vel*dt;
@@ -124,10 +129,16 @@ public:
 
 class Projectile final: public MobileGravitatingObject {
 private:
-	int damage;
+	int damage; unsigned lifetime = 10000; unsigned time_lived = 0;
 public:
 	Projectile(float x, float y, int dmg, float mass, float radius, float vx0, float vy0): 
 	MobileGravitatingObject(x, y, mass, radius, vx0, vy0), damage(dmg) {}
+
+	void update_state() override {
+		++time_lived;
+		if (time_lived > lifetime) 
+			erased = true;
+	}
 
 	void on_collision(shared_ptr<GravitatingObject> col_with) override {
 		// Has to deal damage (should change the signature for that to be possible)
@@ -143,7 +154,7 @@ public:
 	void on_out_of_bounds(Bounds b) override {
 		// Should probably delete itself as well
 		// Maybe not when locked (if this is even a thing)
-		erased = true;
+		//erased = true;
 	}
 };
 
@@ -155,13 +166,13 @@ protected:
 	int hp;
 public:
 	Spaceship(float x, float y, float mass, float radius=1., float v0x = .0, float v0y = .0):
-	MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.), proj_speed(5.), proj_damage(3), hp(100) {}
+	MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.), proj_speed(50.), proj_damage(3), hp(100) {}
 
 	virtual Projectile* fire_projectile() {
 		auto direction = vel / vel.modulo(); // Invalid when vel = 0
 		// This is fairly impossible in-game, but may need fixing
 		auto v0 = proj_speed * direction;
-		return new Projectile(x() + radius*(1. + direction.x), y() + radius* (1. + direction.y),
+		return new Projectile(x() + 200*radius*(direction.x), y() + 200*radius* (direction.y),
 					proj_damage, 1., 1., vel.x + v0.x, vel.y + v0.y);
 	}
 
@@ -174,7 +185,7 @@ class Player final: public Spaceship {
 public:
 	vec<float> mouse_shift{0, 0}; // Will be captured each step at some point, for now is just set from main
 
-	Player(float x, float y, float mass=10., float radius=1., float v0x = .0, float v0y = .0):
+	Player(float x, float y, float mass=10., float radius=100., float v0x = .0, float v0y = .0):
 	// MobileGravitatingObject(x, y, mass, radius, v0x, v0y), jet_accel_mod(2.)
 	Spaceship(x, y,mass, radius, v0x, v0y), mouse_shift{0., 0.} {}
 
@@ -207,6 +218,10 @@ public:
 		vec<float> d = r() - col_with->r();
 		vec<float> v1 = sqrt(GAMMA*col_with->m()/col_with->size()) * d/d.modulo();
 		set_vel(v1);
+	}
+
+	void kill() override {
+		return;
 	}
 };
 
@@ -387,8 +402,8 @@ public:
 
 		void RemoveMobileObject(unsigned mob_i) {
 			unsigned gIdx = mob_index_in_grav(mob_i);
-			mobile_objects.erase(mobile_objects.begin() + mob_i);
 			mobile_indices.erase(mobile_objects[mob_i].get());
+			mobile_objects.erase(mobile_objects.begin() + mob_i);
 			for (auto &p: mobile_indices) {
 				if (p.second > gIdx) p.second--;
 			}
