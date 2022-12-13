@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -115,7 +116,7 @@ int main(int argc, char const *argv[]) {
     map<string, sf::Texture> textures;
 
     sf::RenderWindow window(sf::VideoMode(1000, 1000), "Space Game!");
-    window.setFramerateLimit(120);  // call it once, after creating the window
+    window.setFramerateLimit(60);  // call it once, after creating the window
     GravitySolver gs;  // Created the gravity modelling environment
     GravityObjDrawer drawer(gs, window);
 
@@ -130,6 +131,25 @@ int main(int argc, char const *argv[]) {
     background.setScale((window.getSize().x+.0)/background_texture.getSize().x, (window.getSize().y+.0)/background_texture.getSize().y);
 
 
+    sf::SoundBuffer buffer1;
+    if (!buffer1.loadFromFile("img/main.wav"))
+        return -1;
+
+
+    sf::Sound main_sound;
+    main_sound.setBuffer(buffer1);
+    main_sound.setLoop(true);
+    main_sound.play();
+
+    sf::SoundBuffer buffer2;
+    if (!buffer2.loadFromFile("img/engine.wav"))
+        return -1;
+    sf::Sound engine_sound;
+    engine_sound.setBuffer(buffer2);
+
+    engine_sound.setLoop(true);
+    engine_sound.play();
+        
     
 
     while (window.isOpen()) {
@@ -141,7 +161,8 @@ int main(int argc, char const *argv[]) {
         gs.player()->mouse_shift = {mouseVector.x/window.getSize().x, mouseVector.y/window.getSize().x};
         drawer.setRocketRotation(angle);
         drawer.setFire(angle, mouseVector.modulo());
-
+        engine_sound.setVolume(2+1e-2*mouseVector.modulo());
+        cout << mouseVector.modulo() << endl;
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
@@ -158,8 +179,11 @@ int main(int argc, char const *argv[]) {
                 cout << coord.x << " " << coord.y << endl;
             }
         }
-
-        gs.step();
+        for (size_t i = 0; i < 2; i++)
+        {
+            gs.step();
+        }
+        
 
         window.clear();
         window.draw(background);

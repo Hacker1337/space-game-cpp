@@ -173,6 +173,7 @@ public:
 		auto direction = vel / vel.modulo(); // Invalid when vel = 0
 		// This is fairly impossible in-game, but may need fixing
 		auto v0 = proj_speed * direction;
+		// todo fix strange place...
 		return new Projectile(x() + 200*radius*(direction.x), y() + 200*radius* (direction.y),
 					proj_damage, 1., 1., vel.x + v0.x, vel.y + v0.y);
 	}
