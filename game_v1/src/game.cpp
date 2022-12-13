@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -13,6 +14,7 @@
 using Planet = GravitatingObject;
 using namespace std;
 
+// reads positions of planets from file and loads proper texture images
 void loadMap(const string& file_name, map<string, sf::Texture>& texture_map, GravitySolver& gs) {
     
     // File pointer
@@ -60,23 +62,18 @@ void loadMap(const string& file_name, map<string, sf::Texture>& texture_map, Gra
             // pass headings row
         }
         string type = row[0];
-        float x = stod(row[1]);
-        float y = stof(row[2]);
-        float m = stof(row[3]);
         string image_path = row[4];
         float scale_factor = stof(row[5]);
         
 
         // load texture, if it wasn't loaded previously
-        sf::Texture texture;
         if (!texture_map.count(image_path)) {
+            sf::Texture texture;
             if (!texture.loadFromFile(image_path)) {
                 // error...
             }
             texture.setSmooth(true);
             texture_map[image_path] = texture;
-        } else {
-            texture = texture_map[image_path];
         }
 
 
@@ -88,6 +85,9 @@ void loadMap(const string& file_name, map<string, sf::Texture>& texture_map, Gra
         }
         else {
             if (type == "Planet") {
+                float x = stod(row[1]);
+                float y = stof(row[2]);
+                float m = stof(row[3]);
                 float r = stof(row[6]);
 
                 gs.AddFixedObject<Planet>(true, x, y, m, r);  // Adding a planet
@@ -97,7 +97,13 @@ void loadMap(const string& file_name, map<string, sf::Texture>& texture_map, Gra
                 planet->setOrigin(planet->getGlobalBounds().width / 2,
                                     planet->getGlobalBounds().height / 2);
                 planet->setScale(scale_factor, scale_factor);
+                planet->setOrigin(planet->getGlobalBounds().width / 2,
+                                    planet->getGlobalBounds().height / 2);
+                planet->setScale(scale_factor, scale_factor);
  
+            }
+            else if (type == "Shoot") {
+                gs.set_projectile_texture(texture_map[image_path], scale_factor);
             }
         }
 
@@ -110,7 +116,7 @@ int main(int argc, char const *argv[]) {
     map<string, sf::Texture> textures;
 
     sf::RenderWindow window(sf::VideoMode(1000, 1000), "Space Game!");
-    window.setFramerateLimit(120);  // call it once, after creating the window
+    window.setFramerateLimit(60);  // call it once, after creating the window
     GravitySolver gs;  // Created the gravity modelling environment
     GravityObjDrawer drawer(gs, window);
 
@@ -125,22 +131,28 @@ int main(int argc, char const *argv[]) {
     background.setScale((window.getSize().x+.0)/background_texture.getSize().x, (window.getSize().y+.0)/background_texture.getSize().y);
 
 
+    sf::SoundBuffer buffer1;
+    if (!buffer1.loadFromFile("img/main.wav"))
+        return -1;
+
+
+    sf::Sound main_sound;
+    main_sound.setBuffer(buffer1);
+    main_sound.setLoop(true);
+    main_sound.play();
+
+    sf::SoundBuffer buffer2;
+    if (!buffer2.loadFromFile("img/engine.wav"))
+        return -1;
+    sf::Sound engine_sound;
+    engine_sound.setBuffer(buffer2);
+
+    engine_sound.setLoop(true);
+    engine_sound.play();
+        
     
 
     while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                window.close();
-            }
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
-            {
-                // TODO left mouse button is pressed: shoot
-                sf::Vector2i localPosition = sf::Mouse::getPosition(window);
-                // cout << localPosition.x << " " << localPosition.y << endl;
-            }
-        }
-
         // get the local mouse position (relative to a window)
         sf::Vector2i localPosition = sf::Mouse::getPosition(window);
         vec<float> mouseVector({localPosition.x - window.getSize().x/2.0f,
@@ -148,7 +160,30 @@ int main(int argc, char const *argv[]) {
         float angle = atan2(mouseVector.y, mouseVector.x) * 180 / 3.1415;
         gs.player()->mouse_shift = {mouseVector.x/window.getSize().x, mouseVector.y/window.getSize().x};
         drawer.setRocketRotation(angle);
-        gs.step();
+        drawer.setFire(angle, mouseVector.modulo());
+        engine_sound.setVolume(2+1e-2*mouseVector.modulo());
+        cout << mouseVector.modulo() << endl;
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+            {
+                sf::Vector2i localPosition = sf::Mouse::getPosition(window);
+                gs.shoot();
+            }
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+            {
+                vec<float> coord = gs.player()->r();
+                cout << coord.x << " " << coord.y << endl;
+            }
+        }
+        for (size_t i = 0; i < 2; i++)
+        {
+            gs.step();
+        }
+        
 
         window.clear();
         window.draw(background);
