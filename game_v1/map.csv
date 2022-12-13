@@ -6,3 +6,4 @@ Planet,2000,0,3000,img/p6.png,1,150
 Shoot,0,0,0,img/p4.png,0.1,
 Planet,2500,0,1000,img/p8.png,1,150
 Planet,3900,300,100000,img/finish.png,1,350
+Planet,-3000,100,100000,img/p5.png,0.3,45

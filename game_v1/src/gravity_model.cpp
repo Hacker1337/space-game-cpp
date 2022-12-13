@@ -218,7 +218,11 @@ public:
 
 	void on_collision(shared_ptr<GravitatingObject> col_with) {
 		vec<float> d = r() - col_with->r();
-		vec<float> v1 = sqrt(GAMMA*col_with->m()/col_with->size()) * d/d.modulo();
+		vec<float> v1 = sqrt(GAMMA*mass*col_with->m()/col_with->size()/5) * d/d.modulo();
+		// vec<float> v1 = vel.modulo() * d/d.modulo();
+		
+		// vec<float> r0 = d/d.modulo();
+		// vec<float> v1 = vel - 2*r0*(vel.x*r0.x + vel.y*r0.y);
 		set_vel(v1);
         //cout<< "Projectile collision at "<< col_with->r()<< "\n";
 	}

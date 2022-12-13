@@ -161,8 +161,8 @@ int main(int argc, char const *argv[]) {
         gs.player()->mouse_shift = {mouseVector.x/window.getSize().x, mouseVector.y/window.getSize().x};
         drawer.setRocketRotation(angle);
         drawer.setFire(angle, mouseVector.modulo());
-        engine_sound.setVolume(2+1e-2*mouseVector.modulo());
-        cout << mouseVector.modulo() << endl;
+        engine_sound.setVolume(2+3e-2*mouseVector.modulo());
+        // cout << mouseVector.modulo() << endl;
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
